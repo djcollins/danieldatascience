@@ -13,7 +13,6 @@ class my_turtle():
         self.dy=dy
         self.x=x
         self.y=y
-
     def xcor(self):
         return self.x
     def ycor(self):
@@ -27,12 +26,14 @@ class my_turtle():
         self.y=y
 
 
-def get_turtle():
+def get_turtle(ball_speed):
+    wn = turtle.Screen()
+    wn.clear()
     paddle_a = turtle.Turtle()
     paddle_a.speed(0)
     paddle_a.shape("square")
     paddle_a.color("black")
-    paddle_a.shapesize(stretch_wid=1, stretch_len=5)
+    paddle_a.shapesize(stretch_wid=0.1, stretch_len=5)
     paddle_a.penup()
     paddle_a.goto(0, -250)
 
@@ -43,7 +44,7 @@ def get_turtle():
     paddle_b.shapesize(stretch_wid=1, stretch_len=5)
     paddle_b.penup()
     paddle_b.goto(250, 250)
-    wn = turtle.Screen()
+
     # wn.title("Ping Pong !!!")
     wn.bgcolor("white")
     wn.setup(width=800, height=600)
@@ -53,9 +54,9 @@ def get_turtle():
     ball.shape("circle")
     ball.color("black")
     ball.penup()
-    ball.goto(0, 0)
-    ball.dx = 0.6  # Can change the speed according to the speed of your system.
-    ball.dy = 0.6  # Can change the speed according to the speed of your system.
+    ball.goto(np.random.uniform(-350, 350), 0)
+    ball.dx = ball_speed # Can change the speed according to the speed of your system.
+    ball.dy = ball_speed  # Can change the speed according to the speed of your system.
     # Pen
     pen = turtle.Turtle()
     pen.speed(0)
@@ -86,19 +87,20 @@ def discount_rewards(r, gamma=0.99):
 
 
 
-def play_games(games_to_play, points_per_game,single_player=True ,show_moves=True,game_agent=None, save_moves=False, use_turtle=True):
+def play_games(games_to_play, points_per_game,ball_speed=200,single_player=True ,show_moves=True,game_agent=None, save_moves=False, use_turtle=True):
+    paddle_speed=ball_speed
     hit_reward = 1
     if(use_turtle==True):
-        paddle_a, paddle_b, ball, wn=get_turtle()
+        paddle_a, paddle_b, ball, wn=get_turtle(ball_speed)
     else:
         paddle_a=my_turtle(0,0,0,0)
         paddle_b=my_turtle(0,0,0,0)
         ball = my_turtle(0, 0, 0, 0)
         paddle_a.goto(0, -250)
         paddle_b.goto(250, 250)
-        ball.goto(0, 0)
-        ball.dx = 0.6
-        ball.dy = 0.6
+        ball.goto(np.random.uniform(-350, 350), 0)
+        ball.dx = ball_speed
+        ball.dy = ball_speed
     time_score = 0
     # Score
     score_a = 0
@@ -106,24 +108,20 @@ def play_games(games_to_play, points_per_game,single_player=True ,show_moves=Tru
     last_move=0
     # Paddle A
 
-    """
-    # Paddle B
-   
-    """
     # Ball
 
     def paddle_a_right():
         if (paddle_a.xcor() >= 350):
             return
         x = paddle_a.xcor()
-        x += 15
+        x += 50
         paddle_a.setx(x)
         #print("Paddle position {0} Ball x coord: {1} ball y coord: {2}".format((paddle_a.xcor(), paddle_a.ycor()),ball.xcor(), ball.ycor()))
     def paddle_a_left():
         if (paddle_a.xcor() <= -350):
             return
         x = paddle_a.xcor()
-        x -= 15
+        x -= 50
         paddle_a.setx(x)
         #print("Paddle position {0} Ball x coord: {1} ball y coord: {2}".format((paddle_a.xcor(), paddle_a.ycor()), ball.xcor(), ball.ycor()))
     # Keyboard bindings
@@ -145,25 +143,26 @@ def play_games(games_to_play, points_per_game,single_player=True ,show_moves=Tru
     score_a = 0
     score_b = 0
     bounce_counter=0
-    previous_frame=np.array(np.zeros(9))
+    previous_frame=np.array(np.zeros(3))
     st=time.time()
     game_in_progress=False
     last_move=0
     frame_counter=0
     # Main game loop
     if(game_agent==None):
-        updates_per_frame=20
+        updates_per_frame=5
     else:
-        updates_per_frame=10
+        updates_per_frame=5
     #print("Playing episode {} of {}".format(episode_count+1, episodes_to_play))
     for game_counter in range(games_to_play):
-        print("Playing Game {} of {} ".format(game_counter+1,games_to_play ))
+        #print("Playing Game {} of {} ".format(game_counter+1,games_to_play ))
         score_a = 0
         score_b = 0
         bounce_counter=0
         game_in_progress=True
         time_score=0
         while game_in_progress==True:
+
             frame_counter+=1
             # a*=-1
             # if(a==1):
@@ -173,14 +172,17 @@ def play_games(games_to_play, points_per_game,single_player=True ,show_moves=Tru
                 wn.update()
             #time_score+=0.1
             if(frame_counter%updates_per_frame==0): #only move and record the state every 10 frames
+                #print(frame_counter)
                 if(game_agent==None):
                     last_move=float(random.randint(0,1))
                 else:
-                    last_move=game_agent.predict(previous_frame.reshape(1,9))
-                    if(last_move>0.5):
-                        last_move=1
-                    else:
-                        last_move=0
+                    #print(previous_frame)
+                    last_move=game_agent.predict(previous_frame.reshape(1,3))
+                    #print(last_move)
+                    last_move=round(last_move[0][0])
+                    #print()
+                    #print(last_move)
+
                 if (last_move == 0):
                     paddle_a_left()
                 else:
@@ -201,11 +203,17 @@ def play_games(games_to_play, points_per_game,single_player=True ,show_moves=Tru
                     ball.dx *= -1
 
                 # Paddle and ball collisions
-                if ball.ycor() <= -250 and ball.xcor() < paddle_a.xcor() + 50 and ball.xcor() > paddle_a.xcor() - 50:
-                    ##print("We hit the ball! {0} Bounces".format(bounce_counter))             ###!!!
+
+                #calculate gradient of ball in case we "missed" but actually hit
+                m=(previous_frame[1]-ball.ycor()) / (previous_frame[0]-ball.xcor())
+                c=previous_frame[1]-m * previous_frame[0]
+                x=-250/m -c
+                if (ball.ycor() <= -250) and ((paddle_a.xcor()-50<x<paddle_a.xcor()+50) or  ( paddle_a.xcor() - 50<ball.xcor() < paddle_a.xcor() + 50)):
+                                 ###!!!
+                    bounce_counter += 1
                     ball_hits+=1
+                    #print("We hit the ball! {0} Bounces".format(bounce_counter))
                     ball.dy *= -1
-                    bounce_counter+=1
                     ball.sety(ball.ycor()+12)
                     rewards.append(1.0)
                 elif ball.ycor() < -255:
@@ -215,37 +223,38 @@ def play_games(games_to_play, points_per_game,single_player=True ,show_moves=Tru
                     # ball must start in a random position, or the network will just learn a pattern
                     ball.goto((random.random() * 350) - 175, 250)
                     ball.dx *= random.choice([1, -1])
-                    rewards.append(-1.0)
-                    ball_misses+=1
-                    # print("We missed the ball. Time score: {0}  Bounces: {1}".format(time_score, bounce_counter))    ###!!!
+                    #rewards.append(-1.0)
+                    #print("We missed the ball. Time score: {0}  Bounces: {1}".format(time_score, bounce_counter))    ###!!!
+                    paddle_a.setx(0)
+                    ball_misses += 1
                     bounce_counter = 0
                     time_score = 0
                     # print("Paddle position {0} Ball x coord: {1} ball y coord: {2}".format((paddle_a.xcor(), paddle_a.ycor()),
                     #                                                                      ball.xcor(), ball.ycor()))
-                else:
-                    rewards.append(0.0)
+                # else:
+                #     #rewards.append(0.0)
 
 
                 ball_x=ball.xcor()
                 ball_y=ball.ycor()
                 paddle_x=paddle_a.xcor()
                 paddle_y=paddle_a.ycor()
-                current_frame=np.array([ball_x, ball_y, paddle_x, paddle_y, ball_x-paddle_x, ball_y-paddle_y, ball_x-paddle_x + ball_y-paddle_y, last_move,1 if game_in_progress==True else 0])
+                current_frame=np.array([ball_x, ball_y, paddle_x]) # ball_x-paddle_x, ball_y-paddle_y, ball_x-paddle_x + ball_y-paddle_y, last_move,1 if game_in_progress==True else 0])
                 frame_stack.append(current_frame)
                 #print(current_frame)
                 #print(last_move)
                 #print(rewards[-1])
                 previous_frame=current_frame
-                if (score_a >= points_per_game or score_b >= points_per_game):
+                if (score_a >= points_per_game or score_b >= points_per_game or sum(rewards)>21):
                     game_in_progress = False
                     ### print("Game over ")               ###!!!
                     bounce_counter = 0
     #rewards=discount_rewards(rewards, 0.95)
-    print(len(rewards))
-    print(len(frame_stack))
-    print(len(moves))
-    print("Ball Misses {}".format(ball_misses))
-    print("Ball Hits {}".format(ball_hits))
+    #print(len(rewards))
+    #print(len(frame_stack))
+    #print(len(moves))
+    #print("Ball Misses {}".format(ball_misses))
+    #print("Ball Hits {}".format(ball_hits))
     if(save_moves==True):
         with open("move_array.npy", "wb") as f:
             np.save(f,np.array(moves, dtype=np.float64))
@@ -253,7 +262,7 @@ def play_games(games_to_play, points_per_game,single_player=True ,show_moves=Tru
             np.save(f,np.array(frame_stack, dtype=np.float64))
         with open("reward_array.npy", "wb") as f:
             np.save(f,np.array(rewards, dtype=np.float64))
-    print(time.time()-st)
+    #print(time.time()-st)
     return frame_stack, moves, rewards
 #a,b,c=play_games(100, 21, show_moves=False,use_turtle=False)
 # print(len(a[0]))
