@@ -39,10 +39,13 @@ def generate_random_moves_and_save():
 # generate_random_moves_and_save()
 def make_model_play(model_name, games, show_moves, save_moves=False):
     model = load_model(model_name)
-    frames, moves, rewards = pong.play_games(games, 10, show_moves=show_moves, save_moves=save_moves, game_agent=model,ball_speed=100, use_turtle=True)
+    frames, moves, rewards = pong.play_games(games, 10, show_moves=show_moves, save_moves=save_moves, game_agent=model,
+                                             ball_speed=100, use_turtle=True)
     print(sum(rewards))
     return frames, moves, rewards
-#make_model_play("model_saved49", 10, True, False)
+
+
+# make_model_play("model_saved49", 10, True, False)
 
 # make_model_play("model_saved", 10, False, False)
 
@@ -150,10 +153,12 @@ def set_model_weights(model, weights):
     ind = 0
     for layer in model.layers:
         layer_weights = layer.get_weights()[0]
+        layer_bias = layer.get_weights()[1]
+
         # print(f"layer shape {layer.get_weights()[0].shape}")
-        layer.set_weights(
-            [np.reshape(weights[ind:layer_weights.size + ind], layer_weights.shape), layer.get_weights()[1]])
-        ind = layer_weights.size
+        layer.set_weights([np.reshape(weights[ind:layer_weights.size + ind], layer_weights.shape),
+                           np.reshape(weights[ind + layer_weights.size:ind + layer_weights.size + layer_bias.size], layer_bias.shape)])
+        ind += layer_weights.size + layer_bias.size
     return model
 
 
@@ -163,14 +168,15 @@ def get_model_weights(model):
     for layer in model.layers:
         # print(layer.get_weights()[0].shape)
         weights.append(np.ravel(layer.get_weights()[0]))
+        weights.append(np.ravel(layer.get_weights()[1]))
     return np.concatenate(weights)
 
 
-def main():
+def main_train_evolve():
     my_model = make_a_model(3, 64, 32)  # my main model
     theta = get_model_weights(my_model)  # my main weights
-    std_dev = 0.02
-    lr = 0.1
+    std_dev = 0.02 #drop this guy
+    lr = 0.1 #play with this
     generations = 500  # instaed of epoch/episode
 
     n_trials = 50
@@ -180,23 +186,24 @@ def main():
         fitness = []
 
         for n in range(n_trials):
-            if(n%20==0):
+            if (n % 20 == 0):
                 print(n)
-            noise.append(   np.random.randn(   len(theta) ) * std_dev)
-            set_model_weights(my_model, noise[-1] + theta)
+            noise.append(np.random.randn(len(theta)) * std_dev)
+            set_model_weights(my_model, noise[-1] + theta) #make negative, double the search space
             frames, moves, rewards = pong.play_games(1, 1, game_agent=my_model, save_moves=False, use_turtle=False,
                                                      show_moves=False)
             fitness.append(sum(rewards))
-            #print(n, fitness, noise[-1])
+            # print(n, fitness, noise[-1])
         ranked_fittness = centered_ranker(np.array(fitness, dtype=float))
         print(f"Max fitness {max(fitness)} Average fitness {np.average(fitness)}")
         weighted_average_noise = np.dot(ranked_fittness, noise)
         theta += weighted_average_noise * lr
-        set_model_weights(my_model,theta)
-        my_model.save("model_saved"+str(generation))
+        set_model_weights(my_model, theta)
+        my_model.save("model_saved" + str(generation))
 
     print("awe")
-
+def main_play():
+    pass
     # train_model_with_feedback_save_n_times("model_saved", n=5)
     # frame_stack, moves, rewards = pong.play_games(21, 21, show_moves=True, save_moves=False, use_turtle=True)
     # play_random=True
