@@ -37,7 +37,7 @@ def generate_random_moves_and_save():
 
 
 # generate_random_moves_and_save()
-def make_model_play(model_name, games, show_moves, save_moves=False):
+def make_model_play(model_name, games, show_moves, save_moves=False,ball_speed=10):
     model = load_model(model_name)
     frames, moves, rewards = pong.play_games(games, 10, show_moves=show_moves, save_moves=save_moves, game_agent=model,
                                              ball_speed=100, use_turtle=True)
@@ -203,6 +203,7 @@ def main_train_evolve():
 
     print("awe")
 def main_play():
+    make_model_play("model_saved2_101.0_5.26", 21, True, save_moves=False,ball_speed=10):
     pass
     # train_model_with_feedback_save_n_times("model_saved", n=5)
     # frame_stack, moves, rewards = pong.play_games(21, 21, show_moves=True, save_moves=False, use_turtle=True)
